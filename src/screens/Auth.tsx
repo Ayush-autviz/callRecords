@@ -14,22 +14,31 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RNFS from 'react-native-fs';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function Auth({ onLoginSuccess }) {
+export default function Auth({ onLoginSuccess }: { onLoginSuccess: () => void }) {
   const [email, setEmail] = useState('');
   const [selectedRole, setSelectedRole] = useState('');
   const [folderPath, setFolderPath] = useState('/storage/emulated/0/Recordings/Call/');
   const [showDropdown, setShowDropdown] = useState(false);
   const [showFolderPicker, setShowFolderPicker] = useState(false);
   const [currentPath, setCurrentPath] = useState('/storage/emulated/0/');
-  const [folderContents, setFolderContents] = useState([]);
+  const [folderContents, setFolderContents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [tenantId, setTenantId] = useState('');
+  const [showTenantDropdown, setShowTenantDropdown] = useState(false);
 
   const roles = [
-    { label: 'Select a role...', value: '' },
-    { label: 'Admin', value: 'admin' },
-    { label: 'User', value: 'user' },
-    { label: 'Manager', value: 'manager' },
+    { label: 'Select a type...', value: '' },
+    { label: 'abondoned', value: 'abondoned' },
+    { label: 'fulfilled', value: 'fulfilled' },
+    // { label: 'Manager', value: 'manager' },
+  ];
+
+  const tenantOptions = [
+    { label: 'Select tenant ID...', value: '' },
+    { label: 'Tenant 255', value: '255' },
+    { label: 'Tenant 443', value: '443' },
   ];
 
   // Request storage permission for folder browsing
@@ -51,7 +60,7 @@ export default function Auth({ onLoginSuccess }) {
   };
 
   // Load folder contents
-  const loadFolderContents = async (path) => {
+  const loadFolderContents = async (path: string) => {
     setIsLoading(true);
     try {
       const hasPermission = await requestStoragePermission();
@@ -91,7 +100,7 @@ export default function Auth({ onLoginSuccess }) {
   };
 
   // Handle folder selection
-  const selectFolder = (item) => {
+  const selectFolder = (item: any) => {
     if (item.isFile()) {
       // Don't allow selecting files, only folders
       return;
@@ -126,9 +135,14 @@ export default function Auth({ onLoginSuccess }) {
       Alert.alert('Error', 'Please enter your email');
       return;
     }
+
+    if (!tenantId.trim()) {
+      Alert.alert('Error', 'Please enter your tenant id');
+      return;
+    }
     
     if (!selectedRole) {
-      Alert.alert('Error', 'Please select a role');
+      Alert.alert('Error', 'Please select a type');
       return;
     }
 
@@ -148,7 +162,8 @@ export default function Auth({ onLoginSuccess }) {
       // Store user data in AsyncStorage
       const userData = {
         email: email.trim(),
-        role: selectedRole,
+        tenantId: tenantId.trim(),
+        type: selectedRole,
         folderPath: folderPath.trim(),
         loginTime: new Date().toISOString(),
       };
@@ -157,7 +172,7 @@ export default function Auth({ onLoginSuccess }) {
       
       Alert.alert(
         'Success',
-        `Welcome! You are logged in as ${selectedRole}`,
+        `Welcome! You are logged in.`,
         [{ text: 'OK' }]
       );
       
@@ -172,9 +187,14 @@ export default function Auth({ onLoginSuccess }) {
     }
   };
 
-  const selectRole = (role) => {
+  const selectRole = (role: any) => {
     setSelectedRole(role.value);
     setShowDropdown(false);
+  };
+
+  const selectTenant = (tenant: any) => {
+    setTenantId(tenant.value);
+    setShowTenantDropdown(false);
   };
 
   const getSelectedRoleLabel = () => {
@@ -182,7 +202,12 @@ export default function Auth({ onLoginSuccess }) {
     return role ? role.label : 'Select a role...';
   };
 
-  const renderFolderItem = ({ item }) => (
+  const getSelectedTenantLabel = () => {
+    const tenant = tenantOptions.find(t => t.value === tenantId);
+    return tenant ? tenant.label : 'Select tenant ID...';
+  };
+
+  const renderFolderItem = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={[
         styles.folderItem,
@@ -210,7 +235,7 @@ export default function Auth({ onLoginSuccess }) {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Text style={styles.title}>🔐 Authentication</Text>
       
       <View style={styles.inputContainer}>
@@ -228,7 +253,18 @@ export default function Auth({ onLoginSuccess }) {
       </View>
 
       <View style={styles.inputContainer}>
-        <Text style={styles.label}>Select Role</Text>
+        <Text style={styles.label}>Tenant ID</Text>
+        <TouchableOpacity
+          style={styles.dropdownButton}
+          onPress={() => setShowTenantDropdown(true)}
+        >
+          <Text style={styles.dropdownText}>{getSelectedTenantLabel()}</Text>
+          <Text style={styles.dropdownArrow}>▼</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Select Type</Text>
         <TouchableOpacity
           style={styles.dropdownButton}
           onPress={() => setShowDropdown(true)}
@@ -309,6 +345,44 @@ export default function Auth({ onLoginSuccess }) {
         </TouchableOpacity>
       </Modal>
 
+      {/* Tenant ID Dropdown Modal */}
+      <Modal
+        visible={showTenantDropdown}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowTenantDropdown(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowTenantDropdown(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Tenant ID</Text>
+            <FlatList
+              data={tenantOptions}
+              keyExtractor={(item) => item.value}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.modalItem,
+                    tenantId === item.value && styles.selectedModalItem
+                  ]}
+                  onPress={() => selectTenant(item)}
+                >
+                  <Text style={[
+                    styles.modalItemText,
+                    tenantId === item.value && styles.selectedModalItemText
+                  ]}>
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       {/* Folder Picker Modal */}
       <Modal
         visible={showFolderPicker}
@@ -353,7 +427,7 @@ export default function Auth({ onLoginSuccess }) {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -557,5 +631,35 @@ const styles = StyleSheet.create({
   },
   disabledText: {
     color: '#ccc',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 16,
+    width: '80%',
+    maxHeight: 300,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 16,
+    textAlign: 'center',
+    color: '#333',
+  },
+  modalItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  selectedModalItem: {
+    backgroundColor: '#e3f2fd',
+  },
+  modalItemText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  selectedModalItemText: {
+    color: '#1976d2',
+    fontWeight: '600',
   },
 });
