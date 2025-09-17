@@ -31,14 +31,14 @@ export default function Auth({ onLoginSuccess }: { onLoginSuccess: () => void })
   const roles = [
     { label: 'Select a type...', value: '' },
     { label: 'abondoned', value: 'abondoned' },
-    { label: 'fulfilled', value: 'fulfilled' },
+    { label: 'order confirmation', value: 'order confirmation' },
     // { label: 'Manager', value: 'manager' },
   ];
 
   const tenantOptions = [
-    { label: 'Select tenant ID...', value: '' },
-    { label: 'Tenant 255', value: '255' },
-    { label: 'Tenant 443', value: '443' },
+    { label: 'Select tenant...', value: '' },
+    { label: "wormily's", value: '255' },
+    { label: 'Younger bright', value: '443' },
   ];
 
   // Request storage permission for folder browsing
@@ -253,7 +253,7 @@ export default function Auth({ onLoginSuccess }: { onLoginSuccess: () => void })
       </View>
 
       <View style={styles.inputContainer}>
-        <Text style={styles.label}>Tenant ID</Text>
+        <Text style={styles.label}>Tenant</Text>
         <TouchableOpacity
           style={styles.dropdownButton}
           onPress={() => setShowTenantDropdown(true)}
